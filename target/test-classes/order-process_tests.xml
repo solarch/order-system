@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:core="http://www.mulesoft.org/schema/mule/core"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<munit:config
+		name="munit"
+		doc:name="MUnit configuration" />
+	<spring:beans>
+		<spring:import resource="classpath:order-system.xml" />
+	</spring:beans>
+	
+	<munit:test
+		name="processOrder_returns2ElementMap"
+		description="Calling processOrder flow will return 2 elements of type java Map object">
+		<munit:set
+			payload="#[[{'orderID':444, 'location':'worldwide','price':44.04}, {'orderID':555, 'location':'worldwide','price':55.05}, {'orderID':333, 'location':'national','price':33.03}]]"
+			doc:name="Set Message" />
+		<flow-ref
+			name="processOrder"
+			doc:name="processOrder" />
+		<munit:assert-true
+			message="Payload is NOT a Map. Expected java Map , but found #[payload.getClass().getName()] instead"
+			condition="#[payload is java.util.Map]"
+			doc:name="Assert True: Payload is Java Map" />
+		<munit:assert-on-equals
+			message="Payload does NOT have 2 rows of orders"
+			expectedValue="#[2]"
+			actualValue="#[payload.size()]"
+			doc:name="Assert Equals: Payload has 2 rows" />
+	</munit:test>
+	
+	<munit:test
+		name="processOrder_internationalKeyReturnsWorldwideOrders"
+		description="when key is 'international', the Map object contains worldwide orders as its value">
+		<munit:set
+			payload="#[[{'orderID':444, 'location':'worldwide','price':44.04}, {'orderID':555, 'location':'worldwide','price':55.05}]]"
+			doc:name="Set Message" />
+		<flow-ref
+			name="processOrder"
+			doc:name="processOrder" />
+		<munit:assert-true
+			message="Oops, international key has NO rows"
+			condition="#[payload.international.size() &gt; 0]"
+			doc:name="Assert True: international key has rows" />
+		<foreach
+			collection="#[payload.international]"
+			doc:name="For Each: row in international key">
+			<munit:assert-on-equals
+				message="location is NOT worldwide"
+				expectedValue="#['worldwide']"
+				actualValue="#[payload.location]"
+				doc:name="Assert Equals: 'location' is 'worldwide'" />
+		</foreach>
+	</munit:test>
+	
+	<munit:test
+		name="processOrder_domesticKeyReturnsNationalOrders"
+		description="when key is 'domestic', the Map object contains national orders as its value">
+		<munit:set
+			payload="#[[{'orderID':444, 'location':'worldwide','price':44.04}, {'orderID':555, 'location':'worldwide','price':55.05}, {'orderID':333, 'location':'national','price':33.03}]]"
+			doc:name="Set Message" />
+		<flow-ref
+			name="processOrder"
+			doc:name="processOrder" />
+		<munit:assert-true
+			message="Oops, domestic key has NO rows"
+			condition="#[payload.domestic.size() &gt; 0]"
+			doc:name="Assert True: domestic key has rows" />
+		<foreach
+			collection="#[payload.domestic]"
+			doc:name="For Each: row in domestic key">
+			<munit:assert-on-equals
+				message="location is NOT national"
+				expectedValue="#['national']"
+				actualValue="#[payload.location]"
+				doc:name="Assert Equals: 'location' is 'national'" />
+		</foreach>
+	</munit:test>
+</mule>
